@@ -10,16 +10,17 @@ import torch, torch.nn as nn, torch.nn.functional as F
 
 # ----------------------- config -----------------------
 class Cfg:
-    n_layer = 6
+    # enxuto para runner CPU — treino rapido (<15 min) para iterar
+    n_layer = int(os.environ.get("NLAYER", "4"))
     n_head = 8
-    n_embd = 384
-    block = 256
+    n_embd = int(os.environ.get("NEMBD", "256"))
+    block = int(os.environ.get("BLOCK", "128"))
     vocab = 256            # byte-level
     dropout = 0.0
-    steps = int(os.environ.get("STEPS", "3000"))
-    batch = int(os.environ.get("BATCH", "32"))
+    steps = int(os.environ.get("STEPS", "1000"))
+    batch = int(os.environ.get("BATCH", "16"))
     lr = 3e-4
-    eval_every = 300
+    eval_every = 200
 
 # ----------------------- dados -----------------------
 URLS = [
@@ -101,7 +102,7 @@ def main():
     @torch.no_grad()
     def evaluate():
         model.eval(); losses = []
-        for _ in range(20):
+        for _ in range(10):
             x, y = batch("val")
             logits = model(x)
             losses.append(F.cross_entropy(logits.view(-1, c.vocab), y.view(-1)).item())
@@ -117,7 +118,7 @@ def main():
         opt.step()
         if step % c.eval_every == 0 or step == c.steps-1:
             vl = evaluate()
-            print(f"step {step:4d} | train {loss.item():.3f} | val {vl:.3f} | ppl {math.exp(vl):.1f} | {time.time()-t0:.0f}s")
+            print(f"step {step:4d} | train {loss.item():.3f} | val {vl:.3f} | ppl {math.exp(vl):.1f} | {time.time()-t0:.0f}s", flush=True)
 
     # amostra de geracao
     model.eval()

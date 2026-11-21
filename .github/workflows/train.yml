@@ -13,7 +13,9 @@ on:
 jobs:
   train:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 45
+    env:
+      PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -26,7 +28,7 @@ jobs:
         env:
           STEPS: ${{ github.event.inputs.steps }}
           BATCH: ${{ github.event.inputs.batch }}
-        run: python train_student.py
+        run: python -u train_student.py
       - name: Upload modelo + relatorio
         uses: actions/upload-artifact@v4
         with:
