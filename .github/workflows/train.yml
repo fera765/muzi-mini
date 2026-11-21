@@ -1,0 +1,38 @@
+name: Treinar aluno (muzi)
+
+on:
+  workflow_dispatch:
+    inputs:
+      steps:
+        description: "passos de treino"
+        default: "3000"
+      batch:
+        description: "batch size"
+        default: "32"
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar deps
+        run: pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu && pip install --quiet numpy onnxruntime
+      - name: Treinar
+        working-directory: training
+        env:
+          STEPS: ${{ github.event.inputs.steps }}
+          BATCH: ${{ github.event.inputs.batch }}
+        run: python train_student.py
+      - name: Upload modelo + relatorio
+        uses: actions/upload-artifact@v4
+        with:
+          name: muzi-student
+          path: |
+            training/out/model.onnx
+            training/out/muzi_student.pt
+            training/out/report.txt
+          if-no-files-found: error
