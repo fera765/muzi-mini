@@ -30,21 +30,22 @@ object ModelCatalog {
 
     val models: List<ModelSpec> = listOf(
         ModelSpec(
-            id = "qwen2.5-0.5b-q4f16",
-            label = "Qwen2.5 0.5B Instruct (q4f16) — leve e rapido",
-            paramsB = "0.5B", approxRamMB = 700, contextTokens = 32768, ssm = false,
+            id = "qwen2.5-0.5b-q8",
+            label = "Qwen2.5 0.5B Instruct (int8) — leve e rapido",
+            paramsB = "0.5B", approxRamMB = 900, contextTokens = 32768, ssm = false,
             files = listOf(
-                ModelFile("model.onnx", hf("onnx-community/Qwen2.5-0.5B-Instruct", "onnx/model_q4f16.onnx"), 483),
+                // model_quantized.onnx = pesos int8, KV em fp32 (compativel com o loop)
+                ModelFile("model.onnx", hf("onnx-community/Qwen2.5-0.5B-Instruct", "onnx/model_quantized.onnx"), 512),
                 ModelFile("tokenizer.json", hf("onnx-community/Qwen2.5-0.5B-Instruct", "tokenizer.json"), 3),
                 ModelFile("config.json", hf("onnx-community/Qwen2.5-0.5B-Instruct", "config.json"), 1)
             )
         ),
         ModelSpec(
-            id = "qwen2.5-1.5b-q4f16",
-            label = "Qwen2.5 1.5B Instruct (q4f16) — qualidade alta (professor)",
-            paramsB = "1.5B", approxRamMB = 1500, contextTokens = 32768, ssm = false,
+            id = "qwen2.5-1.5b-q8",
+            label = "Qwen2.5 1.5B Instruct (int8) — qualidade alta (professor)",
+            paramsB = "1.5B", approxRamMB = 2000, contextTokens = 32768, ssm = false,
             files = listOf(
-                ModelFile("model.onnx", hf("onnx-community/Qwen2.5-1.5B-Instruct", "onnx/model_q4f16.onnx"), 1070),
+                ModelFile("model.onnx", hf("onnx-community/Qwen2.5-1.5B-Instruct", "onnx/model_quantized.onnx"), 1600),
                 ModelFile("tokenizer.json", hf("onnx-community/Qwen2.5-1.5B-Instruct", "tokenizer.json"), 3),
                 ModelFile("config.json", hf("onnx-community/Qwen2.5-1.5B-Instruct", "config.json"), 1)
             )
