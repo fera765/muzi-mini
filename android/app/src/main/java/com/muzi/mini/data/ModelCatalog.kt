@@ -30,26 +30,23 @@ object ModelCatalog {
 
     val models: List<ModelSpec> = listOf(
         ModelSpec(
-            id = "qwen2.5-0.5b-int4",
-            label = "Qwen2.5 0.5B Instruct (INT4) — leve e rapido",
-            paramsB = "0.5B", approxRamMB = 450, contextTokens = 32768, ssm = false,
+            id = "qwen2.5-0.5b-q4f16",
+            label = "Qwen2.5 0.5B Instruct (q4f16) — leve e rapido",
+            paramsB = "0.5B", approxRamMB = 700, contextTokens = 32768, ssm = false,
             files = listOf(
-                // Ajustar para o repo ONNX GenAI exato que voce usar.
-                ModelFile("genai_config.json", hf("onnx-community/Qwen2.5-0.5B-Instruct", "onnx/genai_config.json"), 1),
-                ModelFile("model.onnx", hf("onnx-community/Qwen2.5-0.5B-Instruct", "onnx/model.onnx"), 1),
-                ModelFile("model.onnx.data", hf("onnx-community/Qwen2.5-0.5B-Instruct", "onnx/model.onnx.data"), 500),
-                ModelFile("tokenizer.json", hf("onnx-community/Qwen2.5-0.5B-Instruct", "tokenizer.json"), 3)
+                ModelFile("model.onnx", hf("onnx-community/Qwen2.5-0.5B-Instruct", "onnx/model_q4f16.onnx"), 483),
+                ModelFile("tokenizer.json", hf("onnx-community/Qwen2.5-0.5B-Instruct", "tokenizer.json"), 3),
+                ModelFile("config.json", hf("onnx-community/Qwen2.5-0.5B-Instruct", "config.json"), 1)
             )
         ),
         ModelSpec(
-            id = "qwen2.5-1.5b-int4",
-            label = "Qwen2.5 1.5B Instruct (INT4) — qualidade alta (professor)",
-            paramsB = "1.5B", approxRamMB = 1300, contextTokens = 32768, ssm = false,
+            id = "qwen2.5-1.5b-q4f16",
+            label = "Qwen2.5 1.5B Instruct (q4f16) — qualidade alta (professor)",
+            paramsB = "1.5B", approxRamMB = 1500, contextTokens = 32768, ssm = false,
             files = listOf(
-                ModelFile("genai_config.json", hf("onnx-community/Qwen2.5-1.5B-Instruct", "onnx/genai_config.json"), 1),
-                ModelFile("model.onnx", hf("onnx-community/Qwen2.5-1.5B-Instruct", "onnx/model.onnx"), 1),
-                ModelFile("model.onnx.data", hf("onnx-community/Qwen2.5-1.5B-Instruct", "onnx/model.onnx.data"), 1300),
-                ModelFile("tokenizer.json", hf("onnx-community/Qwen2.5-1.5B-Instruct", "tokenizer.json"), 3)
+                ModelFile("model.onnx", hf("onnx-community/Qwen2.5-1.5B-Instruct", "onnx/model_q4f16.onnx"), 1070),
+                ModelFile("tokenizer.json", hf("onnx-community/Qwen2.5-1.5B-Instruct", "tokenizer.json"), 3),
+                ModelFile("config.json", hf("onnx-community/Qwen2.5-1.5B-Instruct", "config.json"), 1)
             )
         ),
         ModelSpec(
