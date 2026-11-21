@@ -1,60 +1,56 @@
 package com.muzi.mini.engine
 
-import ai.onnxruntime.genai.Generator
-import ai.onnxruntime.genai.GeneratorParams
-import ai.onnxruntime.genai.Model
-import ai.onnxruntime.genai.Tokenizer
+import ai.onnxruntime.OrtEnvironment
+import ai.onnxruntime.OrtSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import java.io.File
 
 /**
- * Motor de inferencia CPU-only sobre ONNX Runtime GenAI.
- * Carrega a pasta do modelo (ONNX + tokenizer) e gera tokens em streaming.
+ * Motor de inferencia CPU-only sobre ONNX Runtime core (NEON).
+ * Carrega a sessao ONNX e expoe a geracao em streaming.
  *
- * Observacao de versao: a API do onnxruntime-genai muda entre releases.
- * Este wrapper segue a 0.4.x; ajuste os nomes de metodo se fixar outra versao.
+ * ESTADO: o carregamento da sessao e o controle de threads/RAM estao prontos
+ * e reais. O loop autoregressivo (encode -> run -> decode com KV cache) e o
+ * ponto de integracao final: depende dos nomes de entrada/saida do modelo
+ * escolhido e de um tokenizer. Para modelos exportados pelo onnxruntime-genai
+ * (Qwen/Phi), o ideal e compilar o onnxruntime-genai-android do fonte e trocar
+ * este wrapper pela Generator API — ver android/README.md.
  */
 class OnnxLlmEngine(private val threads: Int) : AutoCloseable {
-    private var model: Model? = null
-    private var tokenizer: Tokenizer? = null
+    private val env: OrtEnvironment = OrtEnvironment.getEnvironment()
+    private var session: OrtSession? = null
 
     fun load(modelDir: String) {
         close()
-        model = Model(modelDir)
-        tokenizer = Tokenizer(model!!)
+        val onnx = File(modelDir).listFiles { f -> f.name.endsWith(".onnx") }?.firstOrNull()
+            ?: error("Nenhum arquivo .onnx em $modelDir")
+        val opts = OrtSession.SessionOptions().apply {
+            setIntraOpNumThreads(threads)
+            setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
+        }
+        session = env.createSession(onnx.absolutePath, opts)
     }
 
-    val isLoaded get() = model != null
+    val isLoaded get() = session != null
 
-    /** Gera a resposta token a token. maxTokens limita a saida. */
-    fun generate(prompt: String, maxTokens: Int = 1024): Flow<String> = flow {
-        val m = model ?: error("Modelo nao carregado")
-        val tok = tokenizer!!
-        val params = GeneratorParams(m).apply {
-            setSearchOption("max_length", (maxTokens).toDouble())
-            setSearchOption("do_sample", 1.0)
-            setSearchOption("temperature", 0.7)
-        }
-        val input = tok.encode(prompt)
-        val gen = Generator(m, params)
-        gen.appendTokenSequences(input)
-        val stream = tok.createStream()
-        try {
-            while (!gen.isDone) {
-                gen.generateNextToken()
-                val last = gen.getLastTokenInSequence(0)
-                val piece = stream.decode(last)
-                if (piece.isNotEmpty()) emit(piece)
-            }
-        } finally {
-            stream.close(); gen.close(); params.close()
-        }
+    /** Nomes de entrada/saida do grafo — util para ligar o loop de geracao. */
+    fun ioInfo(): String {
+        val s = session ?: return "sessao nao carregada"
+        return "inputs=${s.inputNames} outputs=${s.outputNames}"
+    }
+
+    fun generate(prompt: String, maxTokens: Int = 512): Flow<String> = flow {
+        val s = session ?: error("Modelo nao carregado")
+        // Ponto de integracao: aqui entra tokenizer + loop autoregressivo com
+        // KV cache usando s.run(...). Ate ligar, reportamos o estado real.
+        emit("[sessao ONNX carregada] ${ioInfo()}\n")
+        emit("[loop de geracao ainda nao ligado para este modelo — ver README]")
     }.flowOn(Dispatchers.Default)
 
     override fun close() {
-        tokenizer?.close(); tokenizer = null
-        model?.close(); model = null
+        session?.close(); session = null
     }
 }

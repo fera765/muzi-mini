@@ -39,9 +39,11 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
 
-    // Motor de inferencia: ONNX Runtime GenAI (roda o loop de geracao dos
-    // modelos ONNX da Microsoft/Qwen com KV cache, CPU-only, NEON).
-    implementation("com.microsoft.onnxruntime:onnxruntime-genai-android:0.4.0")
+    // Motor de inferencia: ONNX Runtime core para Android (CPU-only, NEON).
+    // Resolve limpo no Maven. O loop de geracao (KV cache) e feito por cima.
+    // Obs: onnxruntime-genai-android NAO esta no Maven como dep simples —
+    // precisa ser compilado do fonte; por isso usamos o core aqui.
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.26.0")
 
     // Download de modelos
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
