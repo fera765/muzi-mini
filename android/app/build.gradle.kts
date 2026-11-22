@@ -12,14 +12,31 @@ android {
         applicationId = "com.muzi.mini"
         minSdk = 26            // Moto G60 (Android 11+) folgado
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1"
+        // versionCode cresce a cada build (GITHUB_RUN_NUMBER) -> update reconhecido
+        versionCode = (System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1)
+        versionName = "0." + (System.getenv("VERSION_CODE") ?: "1")
         // Moto G60 = arm64. Mantemos so arm64 pra reduzir o APK.
         ndk { abiFilters += listOf("arm64-v8a") }
     }
+    // CHAVE FIXA via secrets (keystore gravado pelo CI). Assinatura estavel
+    // entre builds => atualizar sem desinstalar e sem perder o modelo baixado.
+    val ksFile = file("muzi.keystore")
+    val hasKeystore = ksFile.exists()
+    signingConfigs {
+        if (hasKeystore) create("muzi") {
+            storeFile = ksFile
+            storePassword = System.getenv("MUZI_STORE_PASS") ?: ""
+            keyAlias = System.getenv("MUZI_KEY_ALIAS") ?: "muzi"
+            keyPassword = System.getenv("MUZI_KEY_PASS") ?: ""
+        }
+    }
     buildTypes {
+        debug {
+            if (hasKeystore) signingConfig = signingConfigs.getByName("muzi")
+        }
         release {
             isMinifyEnabled = false
+            if (hasKeystore) signingConfig = signingConfigs.getByName("muzi")
         }
     }
     compileOptions {
