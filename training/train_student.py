@@ -151,7 +151,7 @@ def main():
         torch.onnx.export(model, dummy, "out/model.onnx",
                           input_names=["input_ids"], output_names=["logits"],
                           dynamic_axes={"input_ids": {0: "b", 1: "t"}, "logits": {0: "b", 1: "t"}},
-                          opset_version=17)
+                          opset_version=18)
         print("ONNX exportado em out/model.onnx", flush=True)
         import onnxruntime as ort, numpy as np
         s = ort.InferenceSession("out/model.onnx")
