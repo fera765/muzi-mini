@@ -10,17 +10,17 @@ import torch, torch.nn as nn, torch.nn.functional as F
 
 # ----------------------- config -----------------------
 class Cfg:
-    # enxuto para runner CPU — treino rapido (<15 min) para iterar
-    n_layer = int(os.environ.get("NLAYER", "4"))
+    # aluno muzi — pequeno e rapido para o Moto G60, mas maior que o proto
+    n_layer = int(os.environ.get("NLAYER", "6"))
     n_head = 8
-    n_embd = int(os.environ.get("NEMBD", "256"))
+    n_embd = int(os.environ.get("NEMBD", "384"))
     block = int(os.environ.get("BLOCK", "128"))
     vocab = 256            # byte-level
     dropout = 0.0
-    steps = int(os.environ.get("STEPS", "1000"))
-    batch = int(os.environ.get("BATCH", "16"))
+    steps = int(os.environ.get("STEPS", "3000"))
+    batch = int(os.environ.get("BATCH", "24"))
     lr = 3e-4
-    eval_every = 200
+    eval_every = 300
 
 # ----------------------- dados -----------------------
 URLS = [
@@ -31,6 +31,24 @@ URLS = [
     "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt",
 ]
 def load_corpus():
+    # 1) Wikipedia PT via HuggingFace (confiavel no CI) — corpus em portugues
+    try:
+        from datasets import load_dataset
+        print("baixando Wikipedia PT (HuggingFace)...", flush=True)
+        ds = load_dataset("wikimedia/wikipedia", "20231101.pt", split="train", streaming=True)
+        parts = []; total = 0
+        for i, ex in enumerate(ds):
+            t = ex.get("text", "")
+            parts.append(t); total += len(t)
+            if total > 8_000_000 or i > 4000:
+                break
+        raw = ("\n\n".join(parts)).encode("utf-8")
+        if len(raw) > 500_000:
+            print(f"  corpus PT: {len(raw)} bytes de {len(parts)} artigos", flush=True)
+            return raw
+    except Exception as e:
+        print(f"  HF datasets falhou: {e}", flush=True)
+    # 2) fallback: URLs
     hdr = {"User-Agent": "Mozilla/5.0 muzi-train"}
     for u in URLS:
         for attempt in range(3):
