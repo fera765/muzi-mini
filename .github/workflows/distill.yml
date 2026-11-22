@@ -1,0 +1,39 @@
+name: Destilar aluno (professor Qwen)
+
+on:
+  workflow_dispatch:
+    inputs:
+      teacher:
+        description: "modelo professor"
+        default: "Qwen/Qwen2.5-0.5B-Instruct"
+      steps:
+        description: "passos de treino do aluno"
+        default: "2500"
+
+jobs:
+  distill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      PYTHONUNBUFFERED: "1"
+      TEACHER: ${{ github.event.inputs.teacher }}
+      STEPS: ${{ github.event.inputs.steps }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar deps
+        run: pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu && pip install --quiet numpy onnxruntime onnxscript datasets transformers accelerate
+      - name: Destilar
+        working-directory: training
+        run: python -u distill.py
+      - name: Upload aluno
+        uses: actions/upload-artifact@v4
+        with:
+          name: muzi-aluno-destilado
+          path: |
+            training/out/model.onnx
+            training/out/muzi_student.pt
+            training/out/report.txt
+          if-no-files-found: error
