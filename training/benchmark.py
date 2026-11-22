@@ -29,6 +29,17 @@ def chat(model, tok, prompt, max_new=MAXNEW):
                              pad_token_id=tok.eos_token_id)
     return tok.decode(out[0][ids.input_ids.shape[1]:], skip_special_tokens=True)
 
+def chat_exact_words(model, tok, prompt, n):
+    """FEATURE DO RUNTIME: entrega exatamente n palavras. Gera com folga e
+    corta em n; se faltar, continua gerando a partir do que ja tem."""
+    resp = chat(model, tok, prompt, max_new=max(64, int(n * 2.2)))
+    words = resp.split()
+    tries = 0
+    while len(words) < n and tries < 3:
+        cont = chat(model, tok, prompt + "\n\nContinue o texto:", max_new=int(n * 1.5))
+        words += cont.split(); tries += 1
+    return " ".join(words[:n])
+
 # ---------------- scorers ----------------
 def run_code(resp, test_src):
     m = re.search(r"```(?:python)?\s*(.*?)```", resp, re.S) or re.search(r"(def .+)", resp, re.S)
@@ -87,7 +98,11 @@ def main():
     model, tok = load()
     total = 0.0; lines = []
     for name, prompt, scorer in TASKS:
-        resp = chat(model, tok, prompt)
+        # tarefa de tamanho exato usa o controle de comprimento do runtime
+        if name.startswith("instrucao: tamanho"):
+            resp = chat_exact_words(model, tok, prompt, 50)
+        else:
+            resp = chat(model, tok, prompt)
         try: sc = float(scorer(resp))
         except Exception: sc = 0.0
         total += sc
