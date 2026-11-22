@@ -24,19 +24,25 @@ class Cfg:
 
 # ----------------------- dados -----------------------
 URLS = [
-    # PT primeiro (Dom Casmurro), fallback tinyshakespeare
+    # PT primeiro (Machado de Assis), com varias fontes; fallback tinyshakespeare
+    "https://www.gutenberg.org/cache/epub/55752/pg55752.txt",   # Dom Casmurro
     "https://www.gutenberg.org/files/55752/55752-0.txt",
+    "https://www.gutenberg.org/cache/epub/54829/pg54829.txt",   # Memorias Postumas
     "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt",
 ]
 def load_corpus():
+    hdr = {"User-Agent": "Mozilla/5.0 muzi-train"}
     for u in URLS:
-        try:
-            print(f"baixando corpus: {u}")
-            raw = urllib.request.urlopen(u, timeout=60).read()
-            if len(raw) > 100_000:
-                return raw
-        except Exception as e:
-            print(f"  falhou: {e}")
+        for attempt in range(3):
+            try:
+                print(f"baixando corpus (tentativa {attempt+1}): {u}", flush=True)
+                req = urllib.request.Request(u, headers=hdr)
+                raw = urllib.request.urlopen(req, timeout=60).read()
+                if len(raw) > 100_000:
+                    print(f"  ok: {len(raw)} bytes", flush=True)
+                    return raw
+            except Exception as e:
+                print(f"  falhou: {e}", flush=True); time.sleep(3)
     raise RuntimeError("sem corpus")
 
 # ----------------------- modelo -----------------------
@@ -130,28 +136,29 @@ def main():
     sample = bytes(ctx[0].tolist()).decode("utf-8", errors="replace")
     print("\n=== AMOSTRA ===\n" + sample[:400] + "\n===============")
 
-    # export ONNX (prefill: input_ids -> logits)
+    # salva checkpoint + relatorio ANTES do export (nao perder o treino)
     os.makedirs("out", exist_ok=True)
+    final_val = evaluate()
     torch.save(model.state_dict(), "out/muzi_student.pt")
-    dummy = torch.zeros(1, 16, dtype=torch.long)
-    torch.onnx.export(model, dummy, "out/model.onnx",
-                      input_names=["input_ids"], output_names=["logits"],
-                      dynamic_axes={"input_ids": {0: "b", 1: "t"}, "logits": {0: "b", 1: "t"}},
-                      opset_version=17)
     with open("out/report.txt", "w") as f:
-        f.write(f"params={nparams/1e6:.1f}M val_loss={evaluate():.3f}\n")
+        f.write(f"params={nparams/1e6:.1f}M val_loss={final_val:.3f} ppl={math.exp(final_val):.1f}\n")
         f.write("sample:\n" + sample[:400])
-    print("ONNX exportado em out/model.onnx")
+    print(f"checkpoint salvo | val_loss {final_val:.3f}", flush=True)
 
-    # valida recarga do ONNX
+    # export ONNX (prefill: input_ids -> logits), blindado
     try:
-        import onnxruntime as ort
+        dummy = torch.zeros(1, 16, dtype=torch.long)
+        torch.onnx.export(model, dummy, "out/model.onnx",
+                          input_names=["input_ids"], output_names=["logits"],
+                          dynamic_axes={"input_ids": {0: "b", 1: "t"}, "logits": {0: "b", 1: "t"}},
+                          opset_version=17)
+        print("ONNX exportado em out/model.onnx", flush=True)
+        import onnxruntime as ort, numpy as np
         s = ort.InferenceSession("out/model.onnx")
-        import numpy as np
         o = s.run(None, {"input_ids": np.zeros((1, 8), dtype=np.int64)})
-        print(f"ONNX recarregado OK, logits shape {o[0].shape}")
+        print(f"ONNX recarregado OK, logits shape {o[0].shape}", flush=True)
     except Exception as e:
-        print(f"aviso: recarga ONNX falhou: {e}")
+        print(f"AVISO: export/recarga ONNX falhou: {e}", flush=True)
 
 if __name__ == "__main__":
     main()
